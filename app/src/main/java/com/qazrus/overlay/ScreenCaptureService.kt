@@ -197,7 +197,7 @@ class ScreenCaptureService : Service() {
     companion object {
         const val EXTRA_RESULT_CODE = "qazrus.extra.RESULT_CODE"
         const val EXTRA_DATA = "qazrus.extra.DATA"
-        const val EXTRA_TEXT = "qazrus.extra.OCR_TEXT"
+        const val EXTRA_TEXT = "qazrus.extra.OCR_TEXT"\n        const val EXTRA_ALLOW_ONLINE_TRANSLATION = "qazrus.extra.ALLOW_ONLINE_TRANSLATION"
         const val ACTION_OCR_RESULT = "com.qazrus.overlay.OCR_RESULT"
         private const val CHANNEL_ID = "qazrus_capture"
         private const val NOTIFICATION_ID = 4102
