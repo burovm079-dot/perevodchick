@@ -15,6 +15,7 @@ import android.media.Image
 import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
+import android.provider.Settings
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -78,10 +79,12 @@ class ScreenCaptureService : Service() {
                 }
                 updateNotification(summary)
                 sendBroadcast(Intent(ACTION_OCR_RESULT).setPackage(packageName).putExtra(EXTRA_TEXT, summary))
+                showOverlay(summary)
             } catch (error: Exception) {
                 val errorText = "Ошибка OCR: " + (error.message ?: "неизвестная ошибка").take(100)
                 updateNotification(errorText)
                 sendBroadcast(Intent(ACTION_OCR_RESULT).setPackage(packageName).putExtra(EXTRA_TEXT, errorText))
+                showOverlay(errorText)
             } finally {
                 stopCapture()
                 stopSelf()
@@ -111,6 +114,11 @@ class ScreenCaptureService : Service() {
             stopSelf()
         }
         return START_NOT_STICKY
+    }
+
+    private fun showOverlay(text: String) {
+        if (!Settings.canDrawOverlays(this)) return
+        startService(Intent(this, OverlayService::class.java).putExtra(OverlayService.EXTRA_TEXT, text))
     }
 
     private fun Image.toBitmap(): Bitmap {
