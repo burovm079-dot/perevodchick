@@ -6,9 +6,12 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
+import android.media.Image
 import android.media.ImageReader
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
@@ -16,12 +19,11 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
-import android.util.DisplayMetrics
-import android.view.WindowManager
+import java.nio.ByteBuffer
 
 /**
- * Permission-respecting one-frame capture smoke test.
- * OCR and translation are deliberately kept out of this first capture milestone.
+ * Captures one user-authorized screen frame and runs Kazakh/Russian OCR locally.
+ * It deliberately stops after one frame in this prototype.
  */
 class ScreenCaptureService : Service() {
     private var projection: MediaProjection? = null
@@ -57,15 +59,29 @@ class ScreenCaptureService : Service() {
 
         imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
         imageReader?.setOnImageAvailableListener({ reader ->
-            val image = reader.acquireLatestImage()
-            if (image != null) {
+            val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
+            if (captured) {
                 image.close()
-                if (!captured) {
-                    captured = true
-                    updateNotification("Кадр экрана получен. OCR — следующий этап.")
-                    stopCapture()
-                    stopSelf()
+                return@setOnImageAvailableListener
+            }
+            captured = true
+            try {
+                updateNotification("Кадр получен. Загружаю OCR-языки и распознаю текст…")
+                val bitmap = image.toBitmap()
+                image.close()
+                val recognized = KazakhOcr(this).recognize(bitmap)
+                bitmap.recycle()
+                val summary = if (recognized.isBlank()) {
+                    "Текст не найден на кадре."
+                } else {
+                    "OCR: " + recognized.replace("\\s+".toRegex(), " ").take(180)
                 }
+                updateNotification(summary)
+            } catch (error: Exception) {
+                updateNotification("Ошибка OCR: " + (error.message ?: "неизвестная ошибка").take(100))
+            } finally {
+                stopCapture()
+                stopSelf()
             }
         }, handler)
 
@@ -92,6 +108,30 @@ class ScreenCaptureService : Service() {
             stopSelf()
         }
         return START_NOT_STICKY
+    }
+
+    private fun Image.toBitmap(): Bitmap {
+        val plane = planes[0]
+        val buffer: ByteBuffer = plane.buffer
+        val pixelStride = plane.pixelStride
+        val rowStride = plane.rowStride
+        val rowPadding = rowStride - pixelStride * width
+        val paddedWidth = width + rowPadding / pixelStride
+        val pixels = IntArray(paddedWidth * height)
+        val bytes = ByteArray(buffer.remaining())
+        buffer.get(bytes)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val offset = y * rowStride + x * pixelStride
+                val red = bytes[offset].toInt() and 0xff
+                val green = bytes[offset + 1].toInt() and 0xff
+                val blue = bytes[offset + 2].toInt() and 0xff
+                val alpha = bytes[offset + 3].toInt() and 0xff
+                pixels[y * paddedWidth + x] = Color.argb(alpha, red, green, blue)
+            }
+        }
+        return Bitmap.createBitmap(pixels, 0, paddedWidth, paddedWidth, height, Bitmap.Config.ARGB_8888)
+            .let { if (it.width == width) it else Bitmap.createBitmap(it, 0, 0, width, height).also { cropped -> it.recycle() } }
     }
 
     private fun stopCapture() {
