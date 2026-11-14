@@ -72,10 +72,18 @@ class ScreenCaptureService : Service() {
                 image.close()
                 val recognized = KazakhOcr(this).recognize(bitmap)
                 bitmap.recycle()
-                val summary = if (recognized.isBlank()) {
+                val cleanText = recognized.replace("\\s+".toRegex(), " ").trim().take(450)
+                val allowTranslation = intent?.getBooleanExtra(EXTRA_ALLOW_ONLINE_TRANSLATION, false) == true
+                val summary = if (cleanText.isBlank()) {
                     "Текст не найден на кадре."
+                } else if (allowTranslation) {
+                    try {
+                        "Перевод: " + MyMemoryTranslator.translate(cleanText)
+                    } catch (error: Exception) {
+                        "Не удалось перевести: " + (error.message ?: "ошибка сети").take(90) + "\\nОригинал: " + cleanText.take(180)
+                    }
                 } else {
-                    "OCR: " + recognized.replace("\\s+".toRegex(), " ").take(180)
+                    "OCR (оригинал): " + cleanText.take(180) + "\\nВключи онлайн-перевод в приложении для перевода на русский."
                 }
                 updateNotification(summary)
                 sendBroadcast(Intent(ACTION_OCR_RESULT).setPackage(packageName).putExtra(EXTRA_TEXT, summary))
@@ -197,7 +205,8 @@ class ScreenCaptureService : Service() {
     companion object {
         const val EXTRA_RESULT_CODE = "qazrus.extra.RESULT_CODE"
         const val EXTRA_DATA = "qazrus.extra.DATA"
-        const val EXTRA_TEXT = "qazrus.extra.OCR_TEXT"\n        const val EXTRA_ALLOW_ONLINE_TRANSLATION = "qazrus.extra.ALLOW_ONLINE_TRANSLATION"
+        const val EXTRA_TEXT = "qazrus.extra.OCR_TEXT"
+        const val EXTRA_ALLOW_ONLINE_TRANSLATION = "qazrus.extra.ALLOW_ONLINE_TRANSLATION"\n        const val EXTRA_ALLOW_ONLINE_TRANSLATION = "qazrus.extra.ALLOW_ONLINE_TRANSLATION"
         const val ACTION_OCR_RESULT = "com.qazrus.overlay.OCR_RESULT"
         private const val CHANNEL_ID = "qazrus_capture"
         private const val NOTIFICATION_ID = 4102
