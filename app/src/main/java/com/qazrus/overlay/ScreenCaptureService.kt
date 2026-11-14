@@ -77,8 +77,11 @@ class ScreenCaptureService : Service() {
                     "OCR: " + recognized.replace("\\s+".toRegex(), " ").take(180)
                 }
                 updateNotification(summary)
+                sendBroadcast(Intent(ACTION_OCR_RESULT).setPackage(packageName).putExtra(EXTRA_TEXT, summary))
             } catch (error: Exception) {
-                updateNotification("Ошибка OCR: " + (error.message ?: "неизвестная ошибка").take(100))
+                val errorText = "Ошибка OCR: " + (error.message ?: "неизвестная ошибка").take(100)
+                updateNotification(errorText)
+                sendBroadcast(Intent(ACTION_OCR_RESULT).setPackage(packageName).putExtra(EXTRA_TEXT, errorText))
             } finally {
                 stopCapture()
                 stopSelf()
@@ -130,8 +133,7 @@ class ScreenCaptureService : Service() {
                 pixels[y * paddedWidth + x] = Color.argb(alpha, red, green, blue)
             }
         }
-        return Bitmap.createBitmap(pixels, 0, paddedWidth, paddedWidth, height, Bitmap.Config.ARGB_8888)
-            .let { if (it.width == width) it else Bitmap.createBitmap(it, 0, 0, width, height).also { cropped -> it.recycle() } }
+        return Bitmap.createBitmap(pixels, 0, paddedWidth, width, height, Bitmap.Config.ARGB_8888)
     }
 
     private fun stopCapture() {
@@ -187,6 +189,8 @@ class ScreenCaptureService : Service() {
     companion object {
         const val EXTRA_RESULT_CODE = "qazrus.extra.RESULT_CODE"
         const val EXTRA_DATA = "qazrus.extra.DATA"
+        const val EXTRA_TEXT = "qazrus.extra.OCR_TEXT"
+        const val ACTION_OCR_RESULT = "com.qazrus.overlay.OCR_RESULT"
         private const val CHANNEL_ID = "qazrus_capture"
         private const val NOTIFICATION_ID = 4102
     }
