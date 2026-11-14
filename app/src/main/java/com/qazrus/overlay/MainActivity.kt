@@ -20,8 +20,8 @@ import android.widget.TextView
 class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var overlayButton: Button
-    private lateinit var captureManager: MediaProjectionManager
     private lateinit var onlineTranslation: CheckBox
+    private lateinit var captureManager: MediaProjectionManager
 
     private val ocrReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -40,7 +40,7 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         }
         val description = TextView(this).apply {
-            text = "Казахско-русский переводчик для текста на экране.\n\nСейчас доступно: захват одного кадра и локальное OCR казахского/русского текста. Плавающая панель показывает распознанный оригинал; перевод ещё разрабатывается."
+            text = "Казахско-русский переводчик для текста на экране.\n\nOCR работает локально. Для русского перевода включи флажок онлайн-перевода: распознанный фрагмент будет отправлен сервису MyMemory. Не отправляй пароли и личные данные."
             textSize = 16f
             gravity = Gravity.CENTER
             setPadding(24, 24, 24, 24)
@@ -65,7 +65,12 @@ class MainActivity : Activity() {
                 }
             }
         }
-        onlineTranslation = CheckBox(this).apply {\n            text = "Включить онлайн-перевод казахский → русский (отправка текста в MyMemory)"\n            textSize = 14f\n            setPadding(8, 12, 8, 12)\n        }\n        val captureButton = Button(this).apply {
+        onlineTranslation = CheckBox(this).apply {
+            text = "Включить онлайн-перевод казахский → русский (MyMemory)"
+            textSize = 14f
+            setPadding(8, 12, 8, 12)
+        }
+        val captureButton = Button(this).apply {
             text = "Захватить экран и распознать текст"
             setOnClickListener {
                 status.text = "Ожидаю разрешение Android…"
@@ -80,6 +85,7 @@ class MainActivity : Activity() {
             addView(title, matchWrap())
             addView(description, matchWrap())
             addView(overlayButton, matchWrap())
+            addView(onlineTranslation, matchWrap())
             addView(captureButton, matchWrap())
             addView(status, matchWrap())
         }
@@ -119,7 +125,8 @@ class MainActivity : Activity() {
         if (resultCode == RESULT_OK && data != null) {
             val serviceIntent = Intent(this, ScreenCaptureService::class.java).apply {
                 putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, resultCode)
-                putExtra(ScreenCaptureService.EXTRA_DATA, data)\n                putExtra(ScreenCaptureService.EXTRA_ALLOW_ONLINE_TRANSLATION, onlineTranslation.isChecked)
+                putExtra(ScreenCaptureService.EXTRA_DATA, data)
+                putExtra(ScreenCaptureService.EXTRA_ALLOW_ONLINE_TRANSLATION, onlineTranslation.isChecked)
             }
             startForegroundService(serviceIntent)
             status.text = "Разрешение получено. Захватываю экран…"
