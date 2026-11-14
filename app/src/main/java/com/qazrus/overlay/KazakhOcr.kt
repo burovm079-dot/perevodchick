@@ -24,9 +24,9 @@ class KazakhOcr(context: Context) {
             check(api.init(root.absolutePath, "kaz+rus")) {
                 "Не удалось запустить Tesseract OCR"
             }
-            api.pageSegMode = TessBaseAPI.PageSegMode.PSM_AUTO
+            api.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO)
             api.setImage(bitmap)
-            return api.utF8Text?.trim().orEmpty()
+            return api.getUTF8Text()?.trim().orEmpty()
         } finally {
             api.end()
         }
