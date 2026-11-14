@@ -2,7 +2,7 @@ package com.qazrus.overlay
 
 import android.content.Context
 import android.graphics.Bitmap
-import cz.adaptech.tesseract4android.TessBaseAPI
+import com.googlecode.tesseract.android.TessBaseAPI
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -28,7 +28,7 @@ class KazakhOcr(context: Context) {
             api.setImage(bitmap)
             return api.getUTF8Text()?.trim().orEmpty()
         } finally {
-            api.end()
+            api.recycle()
         }
     }
 
