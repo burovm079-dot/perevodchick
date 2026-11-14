@@ -51,7 +51,7 @@ class OverlayService : Service() {
             textSize = 13f
         }
         val close = Button(this).apply {
-            text = "×"
+            this.text = "×"
             textSize = 18f
             setTextColor(Color.WHITE)
             setBackgroundColor(Color.TRANSPARENT)
